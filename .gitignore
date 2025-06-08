@@ -1,3 +1,16 @@
-#모든 .xlsx 파일 무시
-*.xlsx
-*.geojson
+# 우선 data 폴더 자체는 무시하지 않도록 선언
+!data/
+
+# 그다음 .csv 파일은 무시
+data/*.csv
+data/*.xlsx
+
+# 나머지는 다시 포함
+!data/*.shp
+!data/*.shx
+!data/*.dbf
+!data/*.sbn
+!data/*.prj
+
+# data 폴더 내 .csv 파일만 무시
+exports/*
