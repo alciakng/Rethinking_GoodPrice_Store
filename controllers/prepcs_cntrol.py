@@ -3,7 +3,7 @@ import geopandas as gpd
 import numpy as np
 import requests                      
 import Levenshtein
-
+ 
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -99,7 +99,7 @@ def categorize_age(age):
         return 'other'
 
 # 처리할 분기 목록
-quarters = ['20231','20232','20233','20234','20241','20242','20243','20244']
+quarters = ['20213','20231','20232','20233','20234','20241','20242','20243','20244']
 final_list = []
 
 for quarter in quarters:
@@ -554,22 +554,22 @@ GoodPrices_summary.to_csv('착한가격업소_요약.csv',encoding='utf-8-sig', 
 
 # ------------------------------------------------------------------
 # Part2. 임대료, 착한가격업소_요약, 매출액, 점포수 등의 데이터프레임을 최종 병합한다.
-# -------------------------------------------------------------------
+# ------------------------------------------------------------------
 df_상권데이터= pd.read_csv('./data/상권데이터.csv', encoding='utf-8')
-df_지역별_임대료 = pd.read_csv('./data/지역별_임대료.csv', encoding='utf-8')
 df_착한가격업소_요약 = pd.read_csv('./data/착한가격업소_요약.csv', encoding='utf-8')
+#df_지역별_임대료 = pd.read_csv('./data/지역별_임대료.csv', encoding='utf-8')
 
 # 컬럼형식 변경 
 df_상권데이터[['기준_년분기_코드','행정동_코드']] = df_상권데이터[['기준_년분기_코드','행정동_코드']].astype('str')
-df_지역별_임대료[['기준_년분기_코드','행정동_코드']] = df_지역별_임대료[['기준_년분기_코드','행정동_코드']].astype('str')
 df_착한가격업소_요약[['기준_년분기_코드','행정동_코드']] = df_착한가격업소_요약[['기준_년분기_코드','행정동_코드']].astype('str')
+#df_지역별_임대료[['기준_년분기_코드','행정동_코드']] = df_지역별_임대료[['기준_년분기_코드','행정동_코드']].astype('str')
 
 # 2023~24년도 데이터만 필터링
-years = ('2023', '2024')
+quarters = ('20233', '20241', '20242', '20243', '20244')
 
-df_base_2023_2024 = df_상권데이터[df_상권데이터['기준_년분기_코드'].str.startswith(years)]
-df_지역별_임대료_2023_2024 = df_지역별_임대료[df_지역별_임대료['기준_년분기_코드'].str.startswith(years)]
-df_착한가격업소_요약_2023_2024 = df_착한가격업소_요약[df_착한가격업소_요약['기준_년분기_코드'].str.startswith(years)]
+df_base_2023_2024 = df_상권데이터[df_상권데이터['기준_년분기_코드'].isin(quarters)]
+df_지역별_임대료_2023_2024 = df_지역별_임대료[df_지역별_임대료['기준_년분기_코드'].isin(quarters)]
+df_착한가격업소_요약_2023_2024 = df_착한가격업소_요약[df_착한가격업소_요약['기준_년분기_코드'].isin(quarters)]
 
 # 행정동코드 통일 
 df_지역별_임대료_2023_2024['행정동_코드'] = df_지역별_임대료_2023_2024['행정동_코드'].str[:8]
@@ -578,15 +578,10 @@ df_착한가격업소_요약_2023_2024['행정동_코드'] = df_착한가격업�
 # data merge 
 merge_keys = ['기준_년분기_코드','행정동_코드']
 
-# 분석을 위해 임대료가 있는 지역을 base 테이블로하여 join 한다.
-df_GoodPrice = df_지역별_임대료_2023_2024.merge(df_base_2023_2024, on=merge_keys, how='left') \
-                                      .merge(df_착한가격업소_요약_2023_2024, on=merge_keys, how='left')
-
-# version2
+# 병합
 df_GoodPrice = df_base_2023_2024.merge(df_착한가격업소_요약_2023_2024, on=merge_keys, how='left')
 
 # 임시 결측치 제거 
-df_GoodPrice = df_GoodPrice[df_GoodPrice['기준_년분기_코드'] != '20245']
 df_GoodPrice = df_GoodPrice[df_GoodPrice['행정동_코드']!='nan']
 df_GoodPrice = df_GoodPrice[df_GoodPrice['행정동'].notna()]
 
@@ -601,9 +596,9 @@ df_GoodPrice.loc[cond_new, '전분기대비_증감업소수'] = df_GoodPrice.loc
 # 2. 완전 공백 구역: 유지율 = 0, 증감 = 0
 df_GoodPrice.loc[cond_empty, ['업소수', '전분기대비_유지율', '전분기대비_증감업소수']] = 0
 
-# ------------------------------------------------------------------
-# Part3. 물가 대리변수 생성 
-# ------------------------------------------------------------------
+# 총_유동인구 
+df_GoodPrice['총_유동인구_수'] = df_GoodPrice['남성_유동인구_수'] + df_GoodPrice['여성_유동인구_수'] 
+
 # 점포수_대비_매출액 생성
 df_GoodPrice['점포수_대비_매출액'] = df_GoodPrice.apply(
     lambda row: 0 if row['점포_수'] == 0 or pd.isna(row['점포_수'])
@@ -611,5 +606,28 @@ df_GoodPrice['점포수_대비_매출액'] = df_GoodPrice.apply(
     axis=1
 )
 
+# 10~30대 유동인구 합계 
+df_GoodPrice['유동인구_10_30대'] = (
+    df_GoodPrice['연령대_10_유동인구_수'] +
+    df_GoodPrice['연령대_20_유동인구_수'] +
+    df_GoodPrice['연령대_30_유동인구_수']
+)
+
+# 40~60대 이상 유동인구수 합계
+df_GoodPrice['유동인구_40_이상'] = (
+    df_GoodPrice['연령대_40_유동인구_수'] +
+    df_GoodPrice['연령대_50_유동인구_수'] +
+    df_GoodPrice['연령대_60_이상_유동인구_수']
+)
+
+# 총_직장인구
+df_GoodPrice['총_직장인구_수'] = df_GoodPrice['남성_직장_인구_수'] + df_GoodPrice['여성_직장_인구_수'] 
+
+# 지역별 점포수 대비 업소수 
+df_GoodPrice['착한가격_업소수_비중'] = (
+    df_GoodPrice['업소수'] / df_GoodPrice['점포_수']
+).round(3)
+
 # 최종데이터셋 export
 df_GoodPrice.to_csv('./model/상권_착한가격업소_병합.csv',encoding='utf-8-sig', index=False)
+

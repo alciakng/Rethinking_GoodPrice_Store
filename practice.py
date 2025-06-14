@@ -39,7 +39,6 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
 from stargazer.stargazer import Stargazer
-
 from util.common_util import load_clustered_geodataframe
 
 
@@ -888,41 +887,15 @@ df_GoodPrice.loc[cond_new, '전분기대비_증감업소수'] = df_GoodPrice.loc
 # 2. 완전 공백 구역: 유지율 = 0, 증감 = 0
 df_GoodPrice.loc[cond_empty, ['업소수', '전분기대비_유지율', '전분기대비_증감업소수']] = 0
 
-# 최종데이터셋 export
-df_GoodPrice.to_csv('./model/상권_착한가격업소_병합.csv',encoding='utf-8-sig', index=False)
+# 총_유동인구 
+df_GoodPrice['총_유동인구_수'] = df_GoodPrice['남성_유동인구_수'] + df_GoodPrice['여성_유동인구_수'] 
 
-# ------------------------------------------------------------------
-# Part3. 물가 대리변수 생성 
-# ------------------------------------------------------------------
 # 점포수_대비_매출액 생성
 df_GoodPrice['점포수_대비_매출액'] = df_GoodPrice.apply(
     lambda row: 0 if row['점포_수'] == 0 or pd.isna(row['점포_수'])
     else int(np.floor(row['당월_매출_금액'] / row['점포_수'])),
     axis=1
 )
-
-# 로그변환 
-#df_GoodPrice['log_임대료'] = np.log(df_GoodPrice['평균임대료'])
-#df_GoodPrice['log_점포수_대비_매출액'] = np.log(df_GoodPrice['점포수_대비_매출액'])
-
-#df_GoodPrice = zscore_scale(df_GoodPrice,'log_임대료')
-#df_GoodPrice = zscore_scale(df_GoodPrice,'log_점포수_대비_매출액')
-
-#df_GoodPrice['물가_proxy'] = df_GoodPrice['log_임대료']*0.6 + df_GoodPrice['log_점포수_대비_매출액']*0.4
-
-# ===============================================================================
-# 3. 데이터_분석
-#
-#   H1. 분기별 물가가 상승하는 지역은 착한가격업소 수 비중이 증가한다. - 기각
-#   H2. 지역내 외식지출비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 검증 
-#   H3. 상권축소지역이면서 폐업률이 낮은지역일수록 착한가격업소수 비중의 추가감소 효과가 있다. - 검증
-#   H4. 초기상권이면서 음식지출금액이 높은지역일수록 착한가격업소수 비중의 추가감소 효과가 있다.
-# ===============================================================================
-
-# 타입변환 
-df_GoodPrice['기준_년분기_코드'] = df_GoodPrice['기준_년분기_코드'].astype(int)
-# 총_유동인구 
-df_GoodPrice['총_유동인구_수'] = df_GoodPrice['남성_유동인구_수'] + df_GoodPrice['여성_유동인구_수'] 
 
 # 10~30대 유동인구 합계 
 df_GoodPrice['유동인구_10_30대'] = (
@@ -944,6 +917,35 @@ df_GoodPrice['총_직장인구_수'] = df_GoodPrice['남성_직장_인구_수'] 
 df_GoodPrice['착한가격_업소수_비중'] = (
     df_GoodPrice['업소수'] / df_GoodPrice['점포_수']
 ).round(3)
+
+# 최종데이터셋 export
+df_GoodPrice.to_csv('./model/상권_착한가격업소_병합.csv',encoding='utf-8-sig', index=False)
+
+
+#df_GoodPrice['log_임대료'] = np.log(df_GoodPrice['평균임대료'])
+#df_GoodPrice['log_점포수_대비_매출액'] = np.log(df_GoodPrice['점포수_대비_매출액'])
+
+#df_GoodPrice = zscore_scale(df_GoodPrice,'log_임대료')
+#df_GoodPrice = zscore_scale(df_GoodPrice,'log_점포수_대비_매출액')
+
+#df_GoodPrice['물가_proxy'] = df_GoodPrice['log_임대료']*0.6 + df_GoodPrice['log_점포수_대비_매출액']*0.4
+
+
+# ===============================================================================
+#  1. 회귀_분석
+#  [Model1]
+#   H1. 지역 내 외식지출비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 검증 
+#   H2. 지역 내 폐업률이 높은지역일수록 착한가격업소 수 비중이 증가한다 - 검증 
+#   H3. 지역 내 상권축소 지역일수록 착한가격업소 수 비중이 증가한다. - 검증
+#   H4. 지역 내 20_30대 인구비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 기각 
+#   [Model2]
+#   H6. 지역 내 상권축소 지역에 따라 20_30대 인구비가 착한가격업소 수에 미치는 영향이 다를 것이다.
+#   [Model3]
+#   추가. H2,H3,H4 의 lag_1 독립 시차변수를 통해 역인과성에 대한 강건성 검증 
+# ===============================================================================
+
+# 타입변환 
+df_GoodPrice['기준_년분기_코드'] = df_GoodPrice['기준_년분기_코드'].astype(int)
 
 # 임시코드(20234~20244 분기 한정)
 df_GoodPrice = df_GoodPrice[df_GoodPrice['기준_년분기_코드'].isin([20234, 20241, 20242, 20243, 20244])]
@@ -1082,7 +1084,7 @@ dummy_columns= ['분기_20241','분기_20242','분기_20243','분기_20244']
 
 # 10. 이상치 파악 후 제거 
 check_outliers_std(df_model[ind_columns],3.0)
-df_model = drop_outlier_rows_std(df_model, ind_columns)
+df_model_drop_outlier = drop_outlier_rows_std(df_model, ind_columns)
 
 scale_columns = ind_columns.copy()
 scale_columns.remove('상권_변화_지표_LL')       
@@ -1090,10 +1092,10 @@ scale_columns.remove('상권_변화_지표_HL')
 scale_columns.remove('상권_변화_지표_LH')            
 
 # 11. 독립변수 단위 스케일링
-df_model = apply_zscore_scaling(df_model,scale_columns)
+df_model_after_scaling = apply_zscore_scaling(df_model_drop_outlier,scale_columns)
 
 selected_columns = ind_columns + dep_columns + dummy_columns
-df_final = df_model[selected_columns].copy()
+df_final = df_model_after_scaling[selected_columns].copy()
 df_final.columns = df_final.columns.str.strip()
 
 # -----------------------------------
@@ -1832,4 +1834,36 @@ viz.show()
 
 gdf = load_clustered_geodataframe()
 
-gdf
+# 데이터 디버깅 코드
+print("=== GeoDataFrame 디버깅 ===")
+print(f"GDF 타입: {type(gdf)}")
+print(f"전체 행 수: {len(gdf)}")
+print(f"컬럼들: {list(gdf.columns)}")
+
+print("\n=== geometry 컬럼 분석 ===")
+print(f"geometry 타입: {type(gdf['geometry'])}")
+print(f"geometry dtype: {gdf['geometry'].dtype}")
+print(f"NaN 개수: {gdf['geometry'].isna().sum()}")
+print(f"첫 번째 geometry: {gdf['geometry'].iloc[0] if len(gdf) > 0 else 'No data'}")
+
+print("\n=== 필수 컬럼 확인 ===")
+required_cols = ['kmeans_cluster', '착한가격_업소수_비중', '행정동']
+for col in required_cols:
+    if col in gdf.columns:
+        print(f"{col}: OK (타입: {gdf[col].dtype})")
+        print(f"  - NaN 개수: {gdf[col].isna().sum()}")
+        if col == 'kmeans_cluster':
+            print(f"  - 고유값: {gdf[col].unique()}")
+    else:
+        print(f"{col}: 누락!")
+
+# geometry가 실제로 지오메트리인지 확인
+if len(gdf) > 0 and not gdf['geometry'].isna().iloc[0]:
+    try:
+        first_geom = gdf['geometry'].iloc[0]
+        print(f"\n첫 번째 geometry 속성:")
+        print(f"  - geom_type: {first_geom.geom_type}")
+        print(f"  - is_valid: {first_geom.is_valid}")
+        print(f"  - bounds: {first_geom.bounds}")
+    except Exception as e:
+        print(f"Geometry 검증 중 오류: {e}")

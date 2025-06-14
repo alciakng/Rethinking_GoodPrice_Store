@@ -2,8 +2,8 @@ import pandas as pd
 import streamlit as st
 from streamlit_option_menu import option_menu
 
-from ui.chart_board import display_clusterwise_goodprice_ratio, display_clusterwise_goodprice_trend, display_goodprice_map, plot_goodprice_trend_by_quarter, show_top10_chart
-from ui.chart_board import display_cluster_comparison_with_expander, display_model_section, display_spc_analysis_block
+from ui.chart_board import display_clusterwise_goodprice_ratio, display_clusterwise_goodprice_trend, display_goodprice_map, display_html_map_in_streamlit, plot_goodprice_trend_by_quarter, save_all_clusters_goodprice_map, show_top10_chart
+from ui.chart_board import display_cluster_comparison_with_expander, display_model_section, display_spc_analysis_block, display_cluster_silhouette_plot
 from util.common_util import load_clustered_geodataframe
 
 # ==========================
@@ -44,22 +44,21 @@ def overview_board():
     with 탭1:
         # 모델1
         model1_hypotheses = [
-            "H1. 분기별 물가가 상승하는 지역은 착한가격업소 수 비중이 증가한다. - 기각",
-            "H2. 지역 내 외식지출비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 검증",
-            "H3. 지역 내 폐업률이 높은지역일수록 착한가격업소 수 비중이 증가한다 - 검증",
-            "H4. 지역 내 상권축소 지역일수록 착한가격업소 수 비중이 증가한다. - 검증",
-            "H5. 지역 내 20_30대 인구비가 높은지역일수록 착한가격업소 수 비중이 증가한다. - 검증"
+            "H1. 외식지출비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 검증",
+            "H2. 폐업률이 높은지역일수록 착한가격업소 수 비중이 증가한다 - 검증",
+            "H3. 상권축소 지역일수록 착한가격업소 수 비중이 증가한다. - 검증",
+            "H4. 20_30대 인구비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 기각"
         ]
 
         display_model_section("Model 1", model1_hypotheses, "./model/model1_results.csv")
 
         # 모델2
-        """
+    
         model2_hypotheses = [
-            "H6. 지역 내 상권축소 지역에 따라 20_30대 인구비가 착한가격업소 수에 미치는 영향이 다를 것이다."
+            "H5. (상호작용항) 20_30대 인구비의 효과는 상권지표에 따라 조절된다. - 검증"
         ]
         display_model_section("Model 2", model2_hypotheses, "./model/model2_results.csv")
-        """
+        
 
         # 모델3
         model3_hypotheses = [
@@ -73,7 +72,7 @@ def overview_board():
         df_상권_착한가격업소_병합 = pd.read_csv('./model/상권_착한가격업소_병합.csv', encoding='utf-8')
         
         with st.expander("📌 시계열그래프", expanded=True):
-            st.markdown("현재 서울시청에 정보공개청구 요청한상태로 2015~2023년 3분기까지 데이터는 보완하여 재분석예정입니다.")
+            st.markdown("'22.3분기, '23.3분기, '24.1~4 분기로 구성된 데이터로 분석진행")
             plot_goodprice_trend_by_quarter(df_상권_착한가격업소_병합)
 
         st.markdown(f"## 📍 상위 10개 행정동")
@@ -118,18 +117,23 @@ def overview_board():
                 background-color: #0f1117;
             ">
                 <h4 style="margin-top: 0; color: #f2f2f2;">클러스터링 기준</h4>
-                <p style="color: #cfcfcf; font-size: 15px;">
-                회귀분석 결과에서 통계적으로 유의한 변수들인  
-                <span style="color:#81C784;">상권변화지표</span>,  
-                <span style="color:#81C784;">폐업_률</span>,  
-                <span style="color:#81C784;">음식지출총금액</span>,  
-                <span style="color:#81C784;">20_30인구비</span> 를 기반으로  
-                <strong>SPC(PLS) - Supervised PCA</strong> 기법을 활용해  
-                2개의 주성분을 도출하고 이를 바탕으로 클러스터링을 수행하였습니다.
+                <p style="color: #cfcfcf; font-size: 15px; line-height: 1.6;">
+                    회귀분석에 사용된 독립변수 및 통제변수를 기반으로<br>
+                    <strong>SPC(PLS) - Supervised PCA</strong> 기법을 활용해 2개의 주성분을 도출하고,
+                    이를 바탕으로 클러스터링을 수행하였습니다.
+                </p>
+                <p style="color: #cfcfcf; font-size: 15px; line-height: 1.6;">
+                    주성분과 클러스터링의 해석은 회귀분석에서 유의한 변수인<br>
+                    <span style="color:#81C784;">상권변화지표</span>,  
+                    <span style="color:#81C784;"> 폐업_률</span>,  
+                    <span style="color:#81C784;"> 음식지출총금액</span>,  
+                    <span style="color:#81C784;"> 20_30인구비</span>,  
+                    <span style="color:#81C784;"> 총_직장인구</span>
+                    를 기준으로 진행하였습니다.
                 </p>
             </div>
             """, unsafe_allow_html=True)
-        
+
         # 간격 추가 (1줄)
         st.markdown("<br>", unsafe_allow_html=True)
         # spc 해석
@@ -138,6 +142,9 @@ def overview_board():
         # 클러스터링 분류 시각화
         df_final_cluster = pd.read_csv('./model/final_cluster.csv', encoding='utf-8')
         display_cluster_comparison_with_expander(df_final_cluster)
+
+        # 실루엣 점수 시각화 
+        display_cluster_silhouette_plot(df_final_cluster)
 
         # 클러스터링 별 업소수 증가추이 
         display_clusterwise_goodprice_trend(df_final_cluster)
@@ -148,3 +155,11 @@ def overview_board():
         # 지역별 클러스터*착한가격업소수 비중 지도시각화
         gdf = load_clustered_geodataframe()
         display_goodprice_map(gdf)
+
+
+
+# ==========================
+# 분석전략 보드
+# ==========================
+def strategy_board(cluster_index):
+    display_html_map_in_streamlit(cluster_index)

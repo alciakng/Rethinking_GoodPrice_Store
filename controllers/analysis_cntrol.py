@@ -6,27 +6,35 @@ from sklearn.cluster import KMeans
 from sklearn.cross_decomposition import PLSRegression
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.tools.tools import add_constant
+from sklearn.metrics import silhouette_score, silhouette_samples
 
-from util.common_util import apply_log_transform, check_outliers_std, check_variable_skewness, compute_rmsle_from_result, drop_outlier_rows_std, save_full_model_output
+from ui.chart_board import display_goodprice_map, save_all_clusters_goodprice_map
+from util.common_util import apply_log_transform, check_outliers_std, check_variable_skewness, compute_rmsle_from_result, drop_outlier_rows_std, load_clustered_geodataframe, save_full_model_output
 from util.common_util import apply_zscore_scaling
 
 from scipy.cluster.hierarchy import linkage, fcluster
 
+
 # ===============================================================================
 #  1. 회귀_분석
 #  [Model1]
-#   H1. 분기별 물가가 상승하는 지역은 착한가격업소 수 비중이 증가한다. - 기각
-#   H2. 지역 내 외식지출비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 검증 
-#   H3. 지역 내 폐업률이 높은지역일수록 착한가격업소 수 비중이 증가한다 - 검증 
-#   H4. 지역 내 상권축소 지역일수록 착한가격업소 수 비중이 증가한다. - 검증
-#   H5. 지역 내 20_30대 인구비가 높은지역일수록 착한가격업소 수 비중이 증가한다. - 검증 
+#   H1. 지역 내 외식지출비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 검증 
+#   H2. 지역 내 폐업률이 높은지역일수록 착한가격업소 수 비중이 증가한다 - 검증 
+#   H3. 지역 내 상권축소 지역일수록 착한가격업소 수 비중이 증가한다. - 검증
+#   H4. 지역 내 20_30대 인구비가 높은지역일수록 착한가격업소 수 비중이 감소한다. - 기각 
 #   [Model2]
-#   H6. 
+#   H6. 지역 내 상권축소 지역에 따라 20_30대 인구비가 착한가격업소 수에 미치는 영향이 다를 것이다.
 #   [Model3]
 #   추가. H2,H3,H4 의 lag_1 독립 시차변수를 통해 역인과성에 대한 강건성 검증 
 # ===============================================================================
-
 df_GoodPrice = pd.read_csv('./model/상권_착한가격업소_병합.csv', encoding='utf-8')
+
+# 점포수_대비_매출액 파생변수 생성
+df_GoodPrice['점포수_대비_매출액'] = df_GoodPrice.apply(
+    lambda row: 0 if row['점포_수'] == 0 or pd.isna(row['점포_수'])
+    else int(np.floor(row['당월_매출_금액'] / row['점포_수'])),
+    axis=1
+)
 
 # 타입변환 
 df_GoodPrice['기준_년분기_코드'] = df_GoodPrice['기준_년분기_코드'].astype(int)
@@ -55,7 +63,7 @@ df_GoodPrice['착한가격_업소수_비중'] = (
 ).round(3)
 
 # 임시코드(20234~20244 분기 한정)
-df_GoodPrice = df_GoodPrice[df_GoodPrice['기준_년분기_코드'].isin([20234, 20241, 20242, 20243, 20244])]
+df_GoodPrice = df_GoodPrice[df_GoodPrice['기준_년분기_코드'].isin([20233, 20241, 20242, 20243, 20244])]
 
 # / 대체 - 회귀분석에서 인식오류  
 # df_GoodPrice['상권명']= df_GoodPrice['상권명'].str.replace('/', '', regex=False)
@@ -80,7 +88,6 @@ df_model = pd.get_dummies(df_model, columns=['상권_변화_지표'], drop_first
 df_model = df_model.drop(columns=['상권_변화_지표_HH'])
 
 # 6. 다중공선성 확인 corr Matrix 
-
 # 다중공선성 확인 대상 변수 리스트
 cols = ['점포수_대비_매출액', '월_평균_소득_금액', '음식_지출_총금액','의료비_지출_총금액','교육_지출_총금액',
         '아파트_단지_수', '아파트_평균_시가', '총_유동인구_수', '유동인구_10_30대', '유동인구_40_이상', '총_직장인구_수', '총_상주인구_수','집객시설_수','운영_영업_개월_차이','폐업_영업_개월_차이','개업_률','폐업_률',
@@ -191,7 +198,7 @@ dummy_columns= ['분기_20241','분기_20242','분기_20243','분기_20244']
 
 # 10. 이상치 파악 후 제거 
 check_outliers_std(df_model[ind_columns],3.0)
-df_model = drop_outlier_rows_std(df_model, ind_columns)
+df_model_drop_outlier = drop_outlier_rows_std(df_model, ind_columns)
 
 scale_columns = ind_columns.copy()
 scale_columns.remove('상권_변화_지표_LL')       
@@ -199,16 +206,16 @@ scale_columns.remove('상권_변화_지표_HL')
 scale_columns.remove('상권_변화_지표_LH')            
 
 # 11. 독립변수 단위 스케일링
-df_model = apply_zscore_scaling(df_model,scale_columns)
+df_model_after_scaling = apply_zscore_scaling(df_model_drop_outlier,scale_columns)
 
-selected_columns = ind_columns + dep_columns + dummy_columns
-df_final = df_model[selected_columns].copy()
+selected_columns = ind_columns + dep_columns + dummy_columns + additional_columns
+df_final = df_model_after_scaling[selected_columns].copy()
 df_final.columns = df_final.columns.str.strip()
 
 # -----------------------------------
-# 12. Model1 회귀식 구성 (가설1,2,3,4,5)
+# 12. Model1 회귀식 구성 (가설1,2,3,4)
 # -----------------------------------
-base_formula = '착한가격_업소수_비중_log ~ 1 + 점포수_대비_매출액_log + 상권_변화_지표_HL + 상권_변화_지표_LH + 상권_변화_지표_LL + 폐업_률 + 음식_지출_총금액_log + 아파트_평균_시가_log + 아파트_단지_수_log + 유동인구_10_30대_log + 유동인구_40_이상_log + 총_직장인구_수_log + 집객시설_수_log + 총_상주인구_수 + 1인_가구비_log + 20_30_인구비_log + 31_50_인구비_log'
+base_formula = '착한가격_업소수_비중_log ~ 1 + 점포수_대비_매출액_log + 상권_변화_지표_HL + 상권_변화_지표_LH + 상권_변화_지표_LL + 폐업_률 + 음식_지출_총금액_log + 아파트_평균_시가_log + 아파트_단지_수_log + 유동인구_10_30대_log + 유동인구_40_이상_log + 총_직장인구_수_log + 집객시설_수_log + 총_상주인구_수 + 20_30_인구비_log + 31_50_인구비_log'
 dummy_formula = ' + '.join(time_dummies.columns.tolist())
 full_formula = base_formula + ' + ' + dummy_formula
 
@@ -226,7 +233,7 @@ save_full_model_output(result,rmsle,"./model/model1_results.csv")
 # --------------------------------------------------------------------------
 # 13. Model2 회귀식 구성 (가설6) - (조절변수 - 상호작용 항) 착한가격업소수 비중의 추가 증/감 검증
 # --------------------------------------------------------------------------
-base_formula2 = '착한가격_업소수_비중_log ~ 1 + 점포수_대비_매출액_log + 상권_변화_지표_HL + 상권_변화_지표_LH + 상권_변화_지표_LL + 폐업_률 + 음식_지출_총금액_log + 아파트_평균_시가_log + 아파트_단지_수_log + 총_유동인구_수_log + 총_직장인구_수_log + 집객시설_수_log + 총_상주인구_수 + 1인_가구비_log + 20_30_인구비_log + 상권_변화_지표_HL:20_30_인구비_log + 상권_변화_지표_LH:20_30_인구비_log + 상권_변화_지표_LL:20_30_인구비_log + 31_50_인구비_log'
+base_formula2 = '착한가격_업소수_비중_log ~ 1 + 점포수_대비_매출액_log + 상권_변화_지표_HL + 상권_변화_지표_LH + 상권_변화_지표_LL + 폐업_률 + 음식_지출_총금액_log + 아파트_평균_시가_log + 아파트_단지_수_log + 유동인구_10_30대_log + 유동인구_40_이상_log + 총_직장인구_수_log + 집객시설_수_log + 총_상주인구_수 + 20_30_인구비_log + 31_50_인구비_log + 상권_변화_지표_HL:20_30_인구비_log + 상권_변화_지표_LH:20_30_인구비_log + 상권_변화_지표_LL:20_30_인구비_log '
 dummy_formula2 = ' + '.join(time_dummies.columns.tolist())
 full_formula2 = base_formula2 + ' + ' + dummy_formula2
 
@@ -282,41 +289,103 @@ rmsle3 = compute_rmsle_from_result(result3, df_final)
 # 모델3 결과 저장 
 save_full_model_output(result3,rmsle3,"./model/model3_results.csv")
 
+# 최종데이터셋 export
+df_reg_final = df_final.reset_index()
+df_reg_final.to_csv('./model/df_reg_final.csv',encoding='utf-8-sig', index=False)
+
 
 # ===========================================================
-# 2. 유의한 변수를 통해 clustering 
-#  - 공통전처리(스케일링, SPCA) 
+# 2. 유의한 변수를 통해 clustering
+#  - 공통전처리(스케일링, SPCA)
 #  [Part1. 계층적 Clustering]
 #  [Part2. K-means 클러스터링]
 #  [Part3. 병합 및 클러스터링 명칭부여]
-#  [Part4. 비교시각화]
 # ===========================================================
 df_for_cluster = pd.read_csv('./model/상권_착한가격업소_병합.csv', encoding='utf-8')
-
-# 착한가격_업소수_비중
-df_for_cluster['착한가격_업소수_비중'] = (
-    df_for_cluster['업소수'] / df_for_cluster['점포_수']
-).round(3)
 
 # 더미변수 생성
 df_for_cluster = pd.get_dummies(df_for_cluster, columns=['상권_변화_지표'], drop_first=False)
 
-# 왜도파악 
-skew_columns = ['착한가격_업소수_비중','음식_지출_총금액','폐업_률','20_30_인구비']
-scale_columns = ['음식_지출_총금액_log','폐업_률_log','20_30_인구비_log']
-check_variable_skewness(df_for_cluster[skew_columns])
+# 왜도 확인 & 로그변환 
+skew_test_columns = [
+    '업소수',
+    '착한가격_업소수_비중',
+    '점포수_대비_매출액',
+    '월_평균_소득_금액',
+    '음식_지출_총금액',
+    '의료비_지출_총금액',
+    '교육_지출_총금액',
+    '아파트_단지_수',
+    '아파트_평균_시가',
+    '유동인구_10_30대',
+    '유동인구_40_이상',
+    '총_직장인구_수',
+    '총_상주인구_수',
+    '집객시설_수',
+    '운영_영업_개월_차이',
+    '폐업_영업_개월_차이',
+    '개업_률',
+    '폐업_률',
+    '1인_가구비',
+    '20_30_인구비',
+    '31_50_인구비',
+    '51_75_인구비'
+]
+
+check_variable_skewness(df_for_cluster[skew_test_columns])
+
+skew_columns = skew_test_columns.copy()
+skew_columns.remove('총_상주인구_수')       # 상주인구수 대칭 
+skew_columns.remove('폐업_영업_개월_차이')
+skew_columns.remove('운영_영업_개월_차이')
 
 # 최종확정된 변수를 기준으로 로그변환 
 df_for_cluster = apply_log_transform(df_for_cluster, skew_columns)
+
+# 9. 독립변수 최종확정 
+# - 아파트_평균_시가_log, 집객시설 수, 운영_영업_개월_차이는 다중공선성이 높아 제거
+scale_columns = [
+    '점포수_대비_매출액_log',
+    '음식_지출_총금액_log',
+    '의료비_지출_총금액_log',
+    '교육_지출_총금액_log',
+    '아파트_평균_시가_log',
+    '아파트_단지_수_log',
+    '유동인구_10_30대_log',
+    '유동인구_40_이상_log',
+    '총_직장인구_수_log',
+    '총_상주인구_수',
+    '집객시설_수_log',
+    '개업_률_log',
+    '폐업_률_log',
+    '1인_가구비_log',
+    '20_30_인구비_log',
+    '31_50_인구비_log'
+]
 
 # 독립변수 단위 스케일링
 df_for_cluster = apply_zscore_scaling(df_for_cluster, scale_columns)
 
 # ▶ 유의변수 기반 클러스터링용 데이터 추출
-features = ['음식_지출_총금액_log', '폐업_률_log', '20_30_인구비_log','상권_변화_지표_HL','상권_변화_지표_LH','상권_변화_지표_LL']
+features = [
+    '점포수_대비_매출액_log',
+    '상권_변화_지표_HL',
+    '상권_변화_지표_LH',
+    '상권_변화_지표_LL',
+    '폐업_률_log',
+    '음식_지출_총금액_log',
+    '아파트_평균_시가_log',
+    '아파트_단지_수_log',
+    '유동인구_10_30대_log',
+    '유동인구_40_이상_log',
+    '총_직장인구_수_log',
+    '집객시설_수_log',
+    '총_상주인구_수',
+    '20_30_인구비_log',
+    '31_50_인구비_log'
+]
 y_var = '착한가격_업소수_비중'
 df_spca = df_for_cluster[[y_var]+features].dropna().copy()
-
 
 # ▶ 스케일링 (연속형만)
 #scale_vars = ['폐업_률', '음식_지출_총금액', '20_30_인구비']
@@ -335,7 +404,23 @@ X_pls = pls.fit_transform(X_final, y)[0]  # 주성분 점수만 추출
 # ▶ 공통 결과 저장용 DF
 df_pls_clustered = pd.DataFrame(X_pls, columns=['SPC1', 'SPC2'], index=df_spca.index)
 
-pd.DataFrame(pls.x_weights_, columns=['SPC1', 'SPC2'], index=features[:pls.x_weights_.shape[0]])
+# PLS(SPC 해석) 
+# 이렇게 세 가지를 함께 보고 해석하면:
+# 어떤 변수들이 축 구성에 중요했고 (weights)
+# 실제 데이터 분산을 얼마나 설명했고 (loadings)
+# 결과적으로 Y에 어떤 영향을 주는지(coef) 를 종합적으로 이해할 수 있습니다.
+df_pls_weights = pd.DataFrame(pls.x_weights_, columns=['SPC1', 'SPC2'], index=features)
+df_pls_loadings = pd.DataFrame(pls.x_loadings_, columns=['SPC1', 'SPC2'], index=features)
+df_pls_coef = pd.DataFrame(pls.coef_.T, index=features, columns=['PLS_Coefficient'])
+
+df_pls_weights.index.name = "feature"  # 인덱스 이름 설정
+df_pls_loadings.index.name = "feature"  # 인덱스 이름 설정
+df_pls_coef.index.name = "feature"  # 인덱스 이름 설정
+
+# pls 해석을 위한 리프토
+df_pls_weights.to_csv("./model/pls_weights.csv", index=True, encoding="utf-8-sig")
+df_pls_loadings.to_csv("./model/pls_loadings.csv", index=True, encoding="utf-8-sig")
+df_pls_coef.to_csv("./model/pls_coef.csv", index=True, encoding="utf-8-sig")
 
 # ---------------------------------------
 # [Part1. 계층적 Clustering]
@@ -361,24 +446,24 @@ df_cluster = df_for_cluster.join(df_pls_clustered)
 
 # SPC1, SPC2 축 이름 재정의 (예: 소비축, 젊은층축 등)
 df_cluster = df_cluster.rename(columns={
-    'SPC1': '소비활성도_축',
-    'SPC2': '2030_소비절제_축'
+    'SPC1': '소비활성도 축',
+    'SPC2': '청년밀집도 축'
 })
 
 # 클러스터 번호에 따른 명칭 매핑 딕셔너리
 hier_cluster_labels = {
-    1: '전연령_극_저소비지역',
-    2: '전연령_소비_비활성지역',
-    3: '중장년_고소비지역',
-    4: '청년_고소비지역',
+    1: '청년 밀집·고소비 지역',
+    2: '청년 밀집·저소비 지역',
+    3: '중장년 밀집·저소비 지역',
+    4: '최대소비 지역',
 }
 
 # 클러스터 번호에 따른 명칭 매핑 딕셔너리
 kmeans_cluster_labels = {
-    0: '전연령_소비_비활성지역',
-    1: '중장년_고소비지역',
-    2: '청년_고소비지역',
-    3: '전연령_극_저소비지역'
+    0: '최대소비 지역',
+    1: '청년 밀집·저소비 지역',
+    2: '중장년 밀집·저소비 지역',
+    3: '청년 밀집·고소비 지역'
 }
 
 # 새로운 컬럼 생성 (기존 숫자 클러스터 유지도 가능)
@@ -387,3 +472,11 @@ df_cluster['kmeans_cluster_label'] = df_cluster['kmeans_cluster'].map(kmeans_clu
 
 # 최종 클러스터링 데이터셋  
 df_cluster.to_csv('./model/final_cluster.csv',encoding='utf-8-sig', index=False)
+
+
+# ===========================================================
+#  etc. 클러스터링 된 지도시각화 군집별로 html export
+# ===========================================================
+# 지역별 클러스터*착한가격업소수 비중 지도시각화
+gdf = load_clustered_geodataframe()
+save_all_clusters_goodprice_map(gdf)
