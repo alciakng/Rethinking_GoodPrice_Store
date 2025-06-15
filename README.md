@@ -46,7 +46,7 @@ The dataset integrates administrative and geospatial information spanning **2020
 - **Apartment complex count and average market price** (`아파트 단지수 및 평균 시가`)  
 - **Business turnover indicators** (`개업률`, `폐업률`)  
 - **Commercial zone change index** (`상권변화지표`)  
-- **20s–30s population ratio**
+- **20s–30s population ratio** (`20~30 인구비`)  
 
 All data is merged based on **official administrative codes** and **shapefile-based boundaries**.
 
