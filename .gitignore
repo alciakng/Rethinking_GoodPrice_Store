@@ -11,6 +11,3 @@ data/*.xlsx
 !data/*.dbf
 !data/*.sbn
 !data/*.prj
-
-# data 폴더 내 .csv 파일만 무시
-exports/*

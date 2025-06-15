@@ -8,11 +8,13 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.tools.tools import add_constant
 from sklearn.metrics import silhouette_score, silhouette_samples
 
-from ui.chart_board import display_goodprice_map, save_all_clusters_goodprice_map
+from ui.chart_board import display_goodprice_map, plot_grouped_bar, plot_grouped_bar_ratio, save_all_clusters_goodprice_map
 from util.common_util import apply_log_transform, check_outliers_std, check_variable_skewness, compute_rmsle_from_result, drop_outlier_rows_std, load_clustered_geodataframe, save_full_model_output
 from util.common_util import apply_zscore_scaling
 
 from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.stats import chi2_contingency
+from statsmodels.stats.proportion import proportions_ztest
 
 
 # ===============================================================================
@@ -208,7 +210,7 @@ scale_columns.remove('상권_변화_지표_LH')
 # 11. 독립변수 단위 스케일링
 df_model_after_scaling = apply_zscore_scaling(df_model_drop_outlier,scale_columns)
 
-selected_columns = ind_columns + dep_columns + dummy_columns + additional_columns
+selected_columns = ind_columns + dep_columns + dummy_columns
 df_final = df_model_after_scaling[selected_columns].copy()
 df_final.columns = df_final.columns.str.strip()
 
@@ -480,3 +482,100 @@ df_cluster.to_csv('./model/final_cluster.csv',encoding='utf-8-sig', index=False)
 # 지역별 클러스터*착한가격업소수 비중 지도시각화
 gdf = load_clustered_geodataframe()
 save_all_clusters_goodprice_map(gdf)
+
+
+
+
+# ===========================================================
+# 3. 소상공인실태조사 전략분석
+# ===========================================================
+df_소상공인실태조사_그룹 = pd.read_csv('./model/소상공인실태조사_그룹화.csv')
+
+#카이제곱검정 변수리스트
+category_cols = [
+    '정부지원정책_추진정책1코드명',
+    '정부지원정책_추진정책2코드명',
+    '사업전환_운영계획코드명',
+    '경영_운영활동코드1명'
+]
+
+# 결과 저장 리스트
+t_results = []
+
+for col in category_cols:
+    # 교차표 생성
+    ct = pd.crosstab(df_소상공인실태조사_그룹['그룹구분'], df_소상공인실태조사_그룹[col])
+
+    # 결측치로 인한 오류 방지를 위해 열 개수가 2개 이상인지 확인
+    if ct.shape[1] < 2:
+        t_results.append({
+            '변수': col,
+            '카이제곱 통계량': None,
+            'p값': None,
+            '결론': '유효한 비교 불가 (카테고리 부족)'
+        })
+        continue
+
+    # 카이제곱 독립성 검정
+    chi2, p, dof, expected = chi2_contingency(ct)
+
+    # 결과 저장
+    t_results.append({
+        '변수': col,
+        '카이제곱 통계량': round(chi2, 3),
+        'p값': round(p, 4),
+        '결론': '유의미한 차이 있음' if p < 0.05 else '차이 없음'
+    })
+
+# 결과 출력
+t_results_df = pd.DataFrame(t_results)
+print(t_results_df)
+
+
+
+z_results = []
+
+for col in category_cols:
+    ct = pd.crosstab(df_소상공인실태조사_그룹['그룹구분'], df_소상공인실태조사_그룹[col])
+
+    # 카테고리가 2개 이상이어야 비교 의미 있음
+    if ct.shape[1] < 2:
+        z_results.append({
+            '변수': col,
+            '비교방식': '비율 z-test',
+            '결론': '유효한 비교 불가 (카테고리 부족)'
+        })
+        continue
+
+    for cat in ct.columns:
+        count = ct[cat].values
+        nobs = ct.sum(axis=1).values
+
+        if len(count) == 2 and all(nobs > 0):
+            stat, pval = proportions_ztest(count, nobs)
+            z_results.append({
+                '변수': col,
+                '카테고리': cat,
+                'z값': round(stat, 3),
+                'p값': round(pval, 4),
+                '결론': '유의미한 비율 차이 있음' if pval < 0.05 else '차이 없음'
+            })
+        else:
+            z_results.append({
+                '변수': col,
+                '카테고리': cat,
+                '결론': '비교 불가 (샘플 부족)'
+            })
+
+z_results_df = pd.DataFrame(z_results)
+print(z_results_df)
+
+
+z_results_df[z_results_df['결론'] == '유의미한 비율 차이 있음']
+
+
+plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'정부지원정책_추진정책1코드명')
+plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'정부지원정책_추진정책2코드명')
+plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'사업전환_운영계획코드명')
+plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'경영_운영활동코드1명')
+

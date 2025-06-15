@@ -361,6 +361,16 @@ def display_cluster_comparison_with_expander(df_cluster):
                 labels={'hier_cluster_label': 'Cluster'},
                 hover_data={'소비활성도 축': ':.2f', '청년밀집도 축': ':.2f'}
             )
+            fig_hier.update_layout(
+                xaxis=dict(
+                    title_font=dict(size=16, color='black', family='Arial'),
+                    tickfont=dict(size=14, color='black', family='Arial')
+                ),
+                yaxis=dict(
+                    title_font=dict(size=16, color='black', family='Arial'),
+                    tickfont=dict(size=14, color='black', family='Arial')
+                )
+            )
             st.plotly_chart(fig_hier, use_container_width=True)
 
         with col2:
@@ -374,6 +384,16 @@ def display_cluster_comparison_with_expander(df_cluster):
                 title='[K-MeANS 클러스터링] Supervised PCA 기반 군집 결과',
                 labels={'kmeans_cluster_label': 'Cluster'},
                 hover_data={'소비활성도 축': ':.2f', '청년밀집도 축': ':.2f'}
+            )
+            fig_kmeans.update_layout(
+                xaxis=dict(
+                    title_font=dict(size=16, color='black', family='Arial'),
+                    tickfont=dict(size=14, color='black', family='Arial')
+                ),
+                yaxis=dict(
+                    title_font=dict(size=16, color='black', family='Arial'),
+                    tickfont=dict(size=14, color='black', family='Arial')
+                )
             )
             st.plotly_chart(fig_kmeans, use_container_width=True)
 
@@ -630,7 +650,23 @@ def display_clusterwise_goodprice_trend(df):
                 'kmeans_cluster_label': '클러스터'
             }
         )
-        fig.update_layout(template='plotly_white')
+
+        fig.update_layout(
+            font=dict(
+                family="Arial",
+                size=14,
+                color="black"
+            ),
+            xaxis=dict(
+                type='category',
+                title_font=dict(family="Arial", size=16, color="black"),
+                tickfont=dict(family="Arial", size=14, color="black")
+            ),
+            yaxis=dict(
+                title_font=dict(family="Arial", size=16, color="black"),
+                tickfont=dict(family="Arial", size=14, color="black")
+            )
+        )
 
         # Streamlit 출력
         st.plotly_chart(fig, use_container_width=True)
