@@ -6,6 +6,7 @@ By leveraging **regional commercial characteristics** and **unsupervised machine
 ---
 ## 🔍 Structure of Project 
 
+```
 Root
 │
 ├── app.py                     # Main Streamlit app launcher
@@ -36,7 +37,7 @@ Root
 │   └── map.json               # Mapping between Korean administrative names and English labels
 │
 └── 참고논문/                 # Reference papers and academic documents
-
+```
 ---
 
 ## 🔍 Project Purpose
