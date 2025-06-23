@@ -236,9 +236,9 @@ def display_spc_analysis_block():
         ---
 
         #### SPC2: **청년밀집도 축**
+        - '20_30_인구비'는  **양의 방향**에서 강한 기여를 보였습니다.
         - `상권_변화_지표_HL`, `폐업_률_log`은 해당 축에 **양의 방향**으로,  
-        - '20_30_인구비'는 SPC1 대비 상대적으로 **양의 방향**으로 기여도 및 상관성이 높았습니다.
-        - 반면 `음식_지출_총금액_log`, `총_직장인구_수_log` 등은 **음(-)의 방향**에서 작용했습니다.
+        - `총_직장인구_수_log` 등은 **음(-)의 방향**에서 작용했으며, `음식_지출_총금액_log`은 SPC1 대비 기여도가 낮았습니다.
 
         - **SPC2는 청년층 유동인구가 많은 반면, 상권 불안정성이나 리스크 요인이 존재하는 지역 특성을 반영합니다.**  
         따라서 **젊은 소비 기반은 형성되어 있으나, 폐업 위험이나 주거 불안정성 등이 동반된 지역**을 나타냅니다.
@@ -277,11 +277,12 @@ def display_cluster_silhouette_plot(df_cluster, cluster_col='kmeans_cluster_labe
         n_clusters = len(np.unique(cluster_labels))
 
         # 색상 (주황, 초록, 파랑, 빨강)
+
         color_map_kmeans = {
-            '최대소비 지역': 'blue',
-            '청년 밀집·저소비 지역': 'red',
-            '중장년 밀집·저소비 지역': 'orange',
-            '청년 밀집·고소비 지역': 'green'
+            '고소비 지역': 'blue',
+            '청년 밀집지역': 'green',
+            '중장년 밀집지역': 'orange',
+            '저소비 지역': 'red'
         }
 
         # 시각화 준비
@@ -330,7 +331,7 @@ def display_cluster_silhouette_plot(df_cluster, cluster_col='kmeans_cluster_labe
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("""
-        - 현재 평균 실루엣 점수는 **0.343**으로, 일반적인 **연속형 변수 기반 클러스터링** 상황에서는 **양호한 수준**에 해당합니다.
+        - 현재 평균 실루엣 점수는 **0.351**으로, 일반적인 **연속형 변수 기반 클러스터링** 상황에서는 **양호한 수준**에 해당합니다.
         - 특히 실루엣 점수가 **0.2 ~ 0.6 구간에 고르게 분포**하며, **0 이하의 점수가 거의 없어** 잘못된 군집 할당 위험이 낮습니다.
         - 실루엣 점수는 연속형 변수 기반 거리 계산 특성상 전체적으로 높게 나타나기 어려운 점을 고려할 때,  
         이번 결과는 **클러스터 간 구분성과 응집도가 일정 수준 이상 확보된 상태**로 판단할 수 있습니다.
@@ -339,11 +340,18 @@ def display_cluster_silhouette_plot(df_cluster, cluster_col='kmeans_cluster_labe
 
 def display_cluster_comparison_with_expander(df_cluster):
 
-    color_map = {
+    hier_color_map = {
         '최대소비 지역': 'blue',
-        '청년 밀집·저소비 지역': 'red',
-        '중장년 밀집·저소비 지역': 'orange',
-        '청년 밀집·고소비 지역': 'green'
+        '청년밀집·고소비지역': 'green',
+        '중장년 밀집지역': 'orange',
+        '저소비 지역': 'red'
+    }
+
+    kmeans_color_map = {
+        '고소비 지역': 'blue',
+        '청년 밀집지역': 'green',
+        '중장년 밀집지역': 'orange',
+        '저소비 지역': 'red'
     }
 
     with st.expander("SPC 기반 클러스터링", expanded=True):
@@ -356,7 +364,7 @@ def display_cluster_comparison_with_expander(df_cluster):
                 x='소비활성도 축',
                 y='청년밀집도 축',
                 color=df_cluster['hier_cluster_label'].astype(str),
-                color_discrete_map=color_map,
+                color_discrete_map=hier_color_map,
                 title='[계층적 클러스터링] Supervised PCA 기반 군집 결과',
                 labels={'hier_cluster_label': 'Cluster'},
                 hover_data={'소비활성도 축': ':.2f', '청년밀집도 축': ':.2f'}
@@ -380,8 +388,8 @@ def display_cluster_comparison_with_expander(df_cluster):
                 x='소비활성도 축',
                 y='청년밀집도 축',
                 color=df_cluster['kmeans_cluster_label'].astype(str),
-                color_discrete_map=color_map,
-                title='[K-MeANS 클러스터링] Supervised PCA 기반 군집 결과',
+                color_discrete_map=kmeans_color_map,
+                title='[K-means 클러스터링] Supervised PCA 기반 군집 결과',
                 labels={'kmeans_cluster_label': 'Cluster'},
                 hover_data={'소비활성도 축': ':.2f', '청년밀집도 축': ':.2f'}
             )
@@ -400,7 +408,7 @@ def display_cluster_comparison_with_expander(df_cluster):
         # 해석
         st.markdown("### 클러스터링 결과 해석")
         st.markdown("""
-        - 특히, **K-Means 클러스터링**은 군집 간 중심 거리 기준으로 구획되기 때문에  **경계가 보다 명확**하게 나타나는 반면,  
+        - **K-Means 클러스터링**은 군집 간 중심 거리 기준으로 구획되기 때문에  **경계가 보다 명확**하게 나타나는 반면,  
           **계층적 클러스터링**은 유사한 특성끼리의 **서브 군집 형성**이 강조된다는 점에서  두 방법 간 차이를 보입니다.
 
         - 두 방법 모두 **소비활성도 축**과  **청년밀집도 축**의 조합을 기반으로 지역의 소비 성향을 효과적으로 분류하고 있으나,  
@@ -444,30 +452,6 @@ def create_map_with_legend(deck_obj, filename="map_with_legend.html"):
             font-weight: 600;
             letter-spacing: 0.5px;
         ">🗺️ 군집별 상권 유형</h3>
-
-        <!-- 군집 1: 전연령_극_저소비지역 -->
-        <div style="display: flex; align-items: center; margin: 8px 0;">
-            <div style="width: 16px; height: 12px; margin-right: 8px; border-radius: 2px; background-color: rgb(255, 0, 0);"></div>
-            <span style="color: #ddd; font-size: 12px;">군집1: 전연령_극_저소비지역</span>
-        </div>
-
-        <!-- 군집 2: 전연령_소비_비활성지역 -->
-        <div style="display: flex; align-items: center; margin: 8px 0;">
-            <div style="width: 16px; height: 12px; margin-right: 8px; border-radius: 2px; background-color: rgb(255, 165, 0);"></div>
-            <span style="color: #ddd; font-size: 12px;">군집2: 전연령_소비_비활성지역</span>
-        </div>
-
-        <!-- 군집 3: 중장년_고소비지역 -->
-        <div style="display: flex; align-items: center; margin: 8px 0;">
-            <div style="width: 16px; height: 12px; margin-right: 8px; border-radius: 2px; background-color: rgb(0, 128, 0);"></div>
-            <span style="color: #ddd; font-size: 12px;">군집3: 중장년_고소비지역</span>
-        </div>
-
-        <!-- 군집 4: 청년_고소비지역 -->
-        <div style="display: flex; align-items: center; margin: 8px 0;">
-            <div style="width: 16px; height: 12px; margin-right: 8px; border-radius: 2px; background-color: rgb(0, 0, 255);"></div>
-            <span style="color: #ddd; font-size: 12px;">군집4: 청년_고소비지역</span>
-        </div>
 
         <div style="
             margin-top: 12px;
@@ -525,7 +509,6 @@ def create_map_with_legend(deck_obj, filename="map_with_legend.html"):
 #   - 클러스터링 상권별 착한가격업소수 비율 (파이차트)
 #   - 클러스터링 상권별 착한가격업소 증가추이 (선그래프 차트)
 # ------------------------------------------------------------------
-
 # ----------------------------
 # 연도별 착한가격업소 증가추이 
 # ----------------------------
@@ -556,7 +539,6 @@ def plot_goodprice_trend_by_quarter(df):
     # Streamlit 출력
     st.plotly_chart(fig, use_container_width=True)
 
-
 # ----------------------------
 # 행정동별 상위 10개 표현하는 함수 
 # ----------------------------
@@ -566,16 +548,17 @@ def show_top10_chart(df, column, title, sort_ascending=False):
     df_top10 = df_filtered.sort_values(by=column, ascending=sort_ascending).head(10)
     st.markdown(f"###### {title}")
     st.dataframe(df_top10[['행정동', column]].reset_index(drop=True))
+    
 # --------------------------------------------
 # 클러스터링 상권별 착한가격업소수 비율 (파이차트)
 # --------------------------------------------
 def display_clusterwise_goodprice_ratio(df, cluster_col='kmeans_cluster_label'):
 
     color_map_kmeans = {
-        '최대소비 지역': 'blue',
-        '청년 밀집·저소비 지역': 'red',
-        '중장년 밀집·저소비 지역': 'orange',
-        '청년 밀집·고소비 지역': 'green'
+        '고소비 지역': 'blue',
+        '청년 밀집지역': 'green',
+        '중장년 밀집지역': 'orange',
+        '저소비 지역': 'red'
     }
 
     with st.expander("클러스터별 착한가격업소 비중 (파이차트)", expanded=True):
@@ -606,8 +589,8 @@ def display_clusterwise_goodprice_ratio(df, cluster_col='kmeans_cluster_label'):
         # 해석 마크다운 예시 (선택 사항)
         st.markdown("""
         - 각 클러스터의 전체 점포 대비 착한가격업소 평균 비중을 비교한 결과입니다.
-        - 청년_소비_비활성지역 및 중장년_소비_비활성지역에서 전체 점포수대비 착한가격업소 비중이 높게 나타납니다.  
-          이는 **소비 여력이 낮은 지역이 착한가격업소 비중이 높다는 것**을 의미하며,
+        - 저소비 지역 및 중장년 밀집지역에서 전체 점포수대비 착한가격업소 비중이 높게 나타납니다.  
+          이는 **소비력이 낮고 고연령 지역이 착한가격업소 비중이 높다는 것**을 의미하며,
           물가안정을 고려했을 때 지자체 주도의 하향식 선정 및 군집별 차별화된 전략마련이 필요함을 시사합니다.
         """)
 
@@ -617,12 +600,11 @@ def display_clusterwise_goodprice_ratio(df, cluster_col='kmeans_cluster_label'):
 def display_clusterwise_goodprice_trend(df):
 
     color_map_kmeans = {
-        '최대소비 지역': 'blue',
-        '청년 밀집·저소비 지역': 'red',
-        '중장년 밀집·저소비 지역': 'orange',
-        '청년 밀집·고소비 지역': 'green'
+        '고소비 지역': 'blue',
+        '청년 밀집지역': 'green',
+        '중장년 밀집지역': 'orange',
+        '저소비 지역': 'red'
     }
-
 
     with st.expander("📈 클러스터별 착한가격업소 비중 추이", expanded=True):
 
@@ -675,10 +657,10 @@ def display_clusterwise_goodprice_trend(df):
 
         - 전체적으로 모든 클러스터에서 **시간이 지남에 따라 착한가격업소 비중이 증가하는 경향**이 나타납니다.
 
-        - 특히 `청년_소비_비활성화지역`에서는 비중 증가 폭이 가장 크고 가파르며,`중장년_소비_비활성화지역` 또한 기울기가 상대적으로 가파른것을 확인가능합니다.
+        - 특히 `저소비지역` 에서는 비중 증가 폭이 가장 크고 가파르며,`중장년 밀집지역` 또한 기울기가 상대적으로 가파른것을 확인가능합니다.
           이는 저소비 지역에서의 상대적 확산 효과가 크게 나타난 것으로 해석됩니다.
 
-        - `청년_소비활성화_지역`과 `최대소비_지역`은  
+        - `청년밀집지역`과 `고소비지역`은  
            다른 클러스터 대비 **착한가격업소 비중이 낮게 유지**되고 있으며,  
            이는 **소비 수요가 안정적이거나 가격 민감도가 상대적으로 낮은 지역의 특성**을 나타납니다.
 
@@ -700,11 +682,12 @@ def display_kmeans_cluster_legend():
     """
     클러스터링 결과의 군집 범례를 Streamlit UI로 표시하는 함수.
     """
+
     color_map_kmeans = {
-        '최대소비 지역': 'blue',
-        '청년 밀집·저소비 지역': 'red',
-        '중장년 밀집·저소비 지역': 'orange',
-        '청년 밀집·고소비 지역': 'green'
+        '고소비 지역': 'blue',
+        '청년 밀집지역': 'green',
+        '중장년 밀집지역': 'orange',
+        '저소비 지역': 'red'
     }
 
     for label, color in color_map_kmeans.items():
@@ -732,11 +715,12 @@ def display_goodprice_map(gdf, map_json_path='./util/map.json'):
     # 색상 매핑
 
     color_map = {
-        '중장년 밀집·저소비 지역' : [255, 165, 0],  # 주황
-        '청년 밀집·고소비 지역': [0, 128, 0],       # 초록
-        '최대소비 지역': [0, 0, 255],             # 파랑
-        '청년 밀집·저소비 지역': [255, 0, 0],      # 빨강
+        '중장년 밀집지역' : [255, 165, 0],    # 주황
+        '청년 밀집지역': [0, 128, 0],        # 초록
+        '고소비 지역': [0, 0, 255],         # 파랑
+        '저소비 지역': [255, 0, 0],         # 빨강
     }
+
     gdf[['r', 'g', 'b']] = pd.DataFrame(gdf['kmeans_cluster_label'].map(color_map).tolist(), index=gdf.index)
 
     # Polygon 좌표 추출
@@ -817,23 +801,23 @@ def display_goodprice_map(gdf, map_json_path='./util/map.json'):
                     각 클러스터는 상권 특성에 따라 4가지로 구분되며,  
                     착한가격업소 비중의 높고 낮음은 3D Bar(높이)로 표시됩니다.
 
-                    - 지도에서 확인할 수 있듯이, `빨간색(청년_소비_비활성화지역)`과  
-                    `주황색(중장년_소비_비활성화지역)`영역에서 **착한가격업소 비중이 상대적으로 높게 나타납니다.**  
-                    이는 저소비/상권축소 지역에서 착한가격업소 제도가 상대적으로 더 확산되고 있음을 의미합니다.
+                    - 지도에서 확인할 수 있듯이, `빨간색(저소비지역)`과  
+                    `주황색(중장년_밀집지역)`영역에서 **착한가격업소 비중이 상대적으로 높게 나타납니다.**  
+                    이는 저소비/고연령 지역에서 착한가격업소 제도가 상대적으로 더 확산되고 있음을 의미합니다.
 
-                    - 반면, `고소비 지역(초록색: 청년_소비_활성화지역 / 파란색: 최대소비_지역)`에서는  
+                    - 반면, `청년/고소비 지역(초록색: 청년밀집지역 / 파란색: 고소비 지역)`에서는  
                     착한가격업소의 비중이 낮게 유지되는 경향이 포착됩니다.  
-                    특히, 최대소비_지역의 착한가격업소 비중의 유의하게 낮은 것을 높이로 확인가능합니다.
-                    이는 **가격 경쟁력보다는 브랜드/품질 선호가 우선되는 소비 성향**이 반영된 결과일 수 있습니다.
+                    특히, 고소비지역의 착한가격업소 비중의 유의하게 낮은 것을 높이로 확인가능합니다.
+                    이는 **소비력이 높고 물가상승 위험지역**에는 착한가격업소의 확산이 더디다는것을 보여줍니다.
 
                     ---
 
                     이러한 결과는 착한가격업소 제도가  
-                    **정작 물가 부담이 큰 지역보다는 수요가 낮은 지역에 집중되고 있다는 점**에서  
+                    **정작 물가 부담이 큰 지역보다는 수요가 낮고 고연령 지역에 집중되고 있다는 점**에서  
                     **보다 전략적인 배치 및 선정 기준 개선**이 필요함을 시사합니다.
 
                     **단순 추천 및 직접참여 기반의 상향식 제도 운영을 넘어**,  
-                    **지역 소비역동성에 따른 하향식(Top-Down) 선정 기준 도입**이 제도 실효성 강화를 위해 필요합니다.
+                    **지역상권 특성에 따른 맞춤형 지원과 하향식(Top-Down) 선정 기준 도입**이 제도 실효성 강화를 위해 필요합니다.
                     """)
 
 
@@ -844,10 +828,10 @@ def save_all_clusters_goodprice_map(gdf, label_map_json_path='./util/cluster.jso
 
     # 색상 매핑
     color_map = {
-        '중장년_소비_비활성화지역': [255, 165, 0],   
-        '청년_소비_활성화_지역': [0, 128, 0],       
-        '최대소비_지역': [0, 0, 255],               
-        '청년_소비_비활성화지역': [255, 0, 0],      
+        '중장년 밀집지역' : [255, 165, 0],  # 주황
+        '청년 밀집지역': [0, 128, 0],       # 초록
+        '최대소비 지역': [0, 0, 255],             # 파랑
+        '저소비 지역': [255, 0, 0],      # 빨강
     }
 
     os.makedirs(export_dir, exist_ok=True)
@@ -953,3 +937,133 @@ def display_html_map_in_streamlit(index: int, height=600, export_dir='./exports/
         html_content = f.read()
 
     components.html(html_content, height=height)
+
+
+
+# ------------------------------------------------------------------
+#   [Part3. 전략분석 시각화]
+#   - 상권쇠퇴 및 상위매출그룹의 구분별 시각화(plot_grouped_bar_ratio)
+#   - 전략분석 z-test 시각화 (display_model_section)
+# ------------------------------------------------------------------
+def plot_grouped_bar_ratio(df: pd.DataFrame, col: str, title: str = None):
+    """
+    Streamlit Expander 안에서 특정 범주형 변수 기준 그룹별 비율(%) 시각화를 출력
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        시각화할 데이터프레임
+    col : str
+        분석 대상 컬럼명
+    title : str
+        표시할 그래프 제목 (기본값은 변수명 기반 생성)
+    """
+    group_col = '그룹구분'
+    color_palette = px.colors.qualitative.Set1
+    title = title or f"'{col}'의 그룹별 비율 분포"
+
+    with st.expander(f"📊 {title}", expanded=True):
+        # 유효성 검사
+        if group_col not in df.columns or col not in df.columns:
+            st.warning(f"❗ '{group_col}' 또는 '{col}' 컬럼이 존재하지 않습니다.")
+            return
+        
+        # 비율 계산
+        ct = pd.crosstab(df[group_col], df[col], normalize='index') * 100
+        if ct.empty:
+            st.warning(f"⚠️ '{col}'에 대해 유효한 교차표가 생성되지 않았습니다.")
+            return
+
+        ct_reset = ct.reset_index().melt(id_vars=group_col, var_name='유형', value_name='비율')
+
+        fig = px.bar(
+            ct_reset,
+            x='유형',
+            y='비율',
+            color=group_col,
+            color_discrete_sequence=color_palette,
+            barmode='group',
+            title=None  # 제목은 st.markdown 으로 처리
+        )
+        fig.update_layout(
+            xaxis_title='유형',
+            yaxis_title='비율 (%)',
+            legend_title='그룹',
+            height=500
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+
+# ---------------------------
+# model 결과 요약출력
+# ---------------------------
+def display_ztest(df_result: pd.DataFrame, title: str = "Z-Test 결과 요약"):
+    """
+    Z-test 결과 DataFrame을 Streamlit에서 시각적으로 강조하여 출력하는 함수.
+
+    Parameters
+    ----------
+    df_result : pd.DataFrame
+        Z-test 결과가 담긴 DataFrame (컬럼에 'z값', 'p값', '결론' 포함)
+    title : str
+        표시할 제목
+    """
+    # -------------------------------
+    # 강조 스타일 함수 정의
+    # -------------------------------
+    def highlight_zscore(val):
+        try:
+            val = float(val)
+            normalized = min(abs(val) / 8, 1.0)  # ±2 기준으로 최대
+            color = f"rgba(30, 136, 229, {normalized})"  # 파란색 계열
+            return f"background-color: {color}"
+        except:
+            return ""
+    
+    
+    def highlight_pvalue(val):
+        try:
+            val = float(val)
+            if val < 0.001:
+                return "color: red; font-weight: bold"
+            elif val < 0.05:
+                return "color: darkorange; font-weight: bold"
+            return ""
+        except:
+            return ""
+
+    # -------------------------------
+    # 시각화 출력
+    # -------------------------------
+    st.markdown(f"### 🔍 {title}")
+
+    with st.expander("📊 유의미한 Z-test 결과", expanded=True):
+        df_sig = df_result[df_result["결론"] == "유의미한 비율 차이 있음"].copy()
+        if df_sig.empty:
+            st.markdown("- ⚠️ 유의미한 결과가 없습니다.")
+        else:
+            styled_df = (
+                df_sig.style
+                .applymap(highlight_zscore, subset=["z값"])
+                .applymap(highlight_pvalue, subset=["p값"])
+                .format({"z값": "{:.3f}", "p값": "{:.4f}"})
+            )
+            st.dataframe(styled_df, use_container_width=True)
+
+        st.markdown("""
+        **소상공인실태조사** 데이터를 기반으로 경영애로사항으로 상권쇠퇴라고 응답한 그룹(A)과 **영업이익이 5천만원 이상인 상위매출 그룹(B)** 간 비교 분석을 수행하였습니다.
+
+        설문항목 중 **필요한 정책항목**, **사업전환계획**, **운영활동노력**에 대하여 두 그룹 간 유의한 차이가 있는지 **Z-test 검정**을 수행하였습니다.
+
+        ---
+
+        - Z-test 결과, **상권쇠퇴 그룹 A**는 B 대비  
+        **자금·퇴로·판로 지원 수요**와  
+        **은퇴·폐업 계획 응답 비율**이 높았으며,  
+        **홍보·디지털 운영 노력**은 상대적으로 부족한 것으로 나타났습니다.
+
+        - 반면, **상위매출 그룹 B**는 A 대비  
+        **인력·세제 지원 수요**와  
+        **계속운영 계획 응답 비율**이 높았고,  
+        **홍보·디지털 운영 노력**이 상대적으로 높았습니다.
+            """)
