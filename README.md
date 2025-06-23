@@ -3,7 +3,20 @@
 This project aims to enhance the **strategic execution of the Good Price Store program** by South Korea’s Ministry of the Interior and Safety.  
 By leveraging **regional commercial characteristics** and **unsupervised machine learning clustering**, we analyze affordability trends and propose a **data-driven, top-down policy approach** to support effective designation and activation of Good Price policies.
 
+
 ---
+
+## 🔍 Project Purpose
+
+Current selection methods often rely on static price levels and lack spatial-economic context.  
+This project introduces a **systematic clustering approach** that:
+
+- Uses **objective market features** to group regions with similar affordability and commercial patterns  
+- Recommends **tailored strategies per cluster type**  
+- Promotes **top-down, region-sensitive planning** by local governments
+
+---
+
 ## 🔍 Structure of Project 
 
 ```
@@ -36,19 +49,8 @@ Root
 │   ├── cluster.json           # Cluster label mapping file
 │   └── map.json               # Mapping between Korean administrative names and English labels
 │
-└── 참고논문/                 # Reference papers and academic documents
+└── 참고논문/                    # Reference papers and academic documents
 ```
----
-
-## 🔍 Project Purpose
-
-Current selection methods often rely on static price levels and lack spatial-economic context.  
-This project introduces a **systematic clustering approach** that:
-
-- Uses **objective market features** to group regions with similar affordability and commercial patterns  
-- Recommends **tailored strategies per cluster type**  
-- Promotes **top-down, region-sensitive planning** by local governments
-
 ---
 
 ## 🔬 Analytical Pipeline
