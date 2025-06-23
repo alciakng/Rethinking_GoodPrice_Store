@@ -11,3 +11,5 @@ data/*.xlsx
 !data/*.dbf
 !data/*.sbn
 !data/*.prj
+
+.DS_Store

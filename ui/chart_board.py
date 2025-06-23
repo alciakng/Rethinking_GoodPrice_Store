@@ -371,12 +371,12 @@ def display_cluster_comparison_with_expander(df_cluster):
             )
             fig_hier.update_layout(
                 xaxis=dict(
-                    title_font=dict(size=16, color='black', family='Arial'),
-                    tickfont=dict(size=14, color='black', family='Arial')
+                    title_font=dict(size=16, color='white', family='Arial'),
+                    tickfont=dict(size=14, color='white', family='Arial')
                 ),
                 yaxis=dict(
-                    title_font=dict(size=16, color='black', family='Arial'),
-                    tickfont=dict(size=14, color='black', family='Arial')
+                    title_font=dict(size=16, color='white', family='Arial'),
+                    tickfont=dict(size=14, color='white', family='Arial')
                 )
             )
             st.plotly_chart(fig_hier, use_container_width=True)
@@ -395,12 +395,12 @@ def display_cluster_comparison_with_expander(df_cluster):
             )
             fig_kmeans.update_layout(
                 xaxis=dict(
-                    title_font=dict(size=16, color='black', family='Arial'),
-                    tickfont=dict(size=14, color='black', family='Arial')
+                    title_font=dict(size=16, color='white', family='Arial'),
+                    tickfont=dict(size=14, color='white', family='Arial')
                 ),
                 yaxis=dict(
-                    title_font=dict(size=16, color='black', family='Arial'),
-                    tickfont=dict(size=14, color='black', family='Arial')
+                    title_font=dict(size=16, color='white', family='Arial'),
+                    tickfont=dict(size=14, color='white', family='Arial')
                 )
             )
             st.plotly_chart(fig_kmeans, use_container_width=True)
@@ -637,16 +637,16 @@ def display_clusterwise_goodprice_trend(df):
             font=dict(
                 family="Arial",
                 size=14,
-                color="black"
+                color="white"
             ),
             xaxis=dict(
                 type='category',
-                title_font=dict(family="Arial", size=16, color="black"),
-                tickfont=dict(family="Arial", size=14, color="black")
+                title_font=dict(family="Arial", size=16, color="white"),
+                tickfont=dict(family="Arial", size=14, color="white")
             ),
             yaxis=dict(
-                title_font=dict(family="Arial", size=16, color="black"),
-                tickfont=dict(family="Arial", size=14, color="black")
+                title_font=dict(family="Arial", size=16, color="white"),
+                tickfont=dict(family="Arial", size=14, color="white")
             )
         )
 
