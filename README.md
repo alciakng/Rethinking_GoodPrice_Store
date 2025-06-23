@@ -4,6 +4,40 @@ This project aims to enhance the **strategic execution of the Good Price Store p
 By leveraging **regional commercial characteristics** and **unsupervised machine learning clustering**, we analyze affordability trends and propose a **data-driven, top-down policy approach** to support effective designation and activation of Good Price policies.
 
 ---
+## 🔍 Structure of Project 
+
+Root
+│
+├── app.py                     # Main Streamlit app launcher
+├── practice.py                # Experimental / development script
+├── requirements.txt           # Python dependencies list
+├── .gitignore                 # Files and folders to be excluded from Git
+│
+├── .streamlit/                # Streamlit configuration directory
+│
+├── controllers/               # Data processing logic modules
+│   ├── analysis_cnrtol.py     # Regression, clustering, and strategy analysis
+│   └── prepcs_cnrtol.py       # Data preprocessing control functions
+│
+├── data/                      # Raw and intermediate dataset directory
+│
+├── exports/                   # Exported results and visualizations
+│
+├── model/                     # Model outputs and base resources for visualization
+│
+├── ui/                        # Streamlit UI component modules
+│   ├── analysis_board.py      # Analysis results display page
+│   ├── chart_board.py         # Visualization and chart board
+│   └── main_board.py          # Main dashboard page
+│
+├── util/                      # Utility functions and configuration files
+│   ├── common_util.py         # General-purpose utility functions
+│   ├── cluster.json           # Cluster label mapping file
+│   └── map.json               # Mapping between Korean administrative names and English labels
+│
+└── 참고논문/                 # Reference papers and academic documents
+
+---
 
 ## 🔍 Project Purpose
 
