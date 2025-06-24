@@ -714,7 +714,17 @@ def display_goodprice_map(gdf, map_json_path='./util/map.json'):
     # Streamlit Expander 내 차트 렌더링
     with st.expander("📍 지역별 클러스터 × 착한가격업소 비중 분석", expanded=True):
         display_kmeans_cluster_legend()
-        display_html_map_in_streamlit()
+        st.markdown(
+            """
+            <iframe src="https://startling-sopapillas-dd29c2.netlify.app"
+                    width="100%"
+                    height="800px"
+                    frameborder="0"
+                    allowfullscreen>
+            </iframe>
+            """,
+            unsafe_allow_html=True
+        )
         st.markdown("""
                     ###  지역별 클러스터별 착한가격업소 분포 해석
 
