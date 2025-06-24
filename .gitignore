@@ -12,4 +12,4 @@ data/*.xlsx
 !data/*.sbn
 !data/*.prj
 
-.DS_Store
+./PT자료
