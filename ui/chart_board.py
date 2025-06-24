@@ -10,10 +10,8 @@ import plotly.graph_objects as go
 
 import pydeck as pdk
 
-
 from util.common_util import load_model_result, safe_format
 from sklearn.metrics import silhouette_score, silhouette_samples
-
 # ---------------------------
 # 테이블 백그라운드 강조
 # ---------------------------
@@ -712,7 +710,43 @@ def display_kmeans_cluster_legend():
 # 지도시각화 함수 
 # -------------
 def display_goodprice_map(gdf, map_json_path='./util/map.json'):
-    # 색상 매핑
+
+    # Streamlit Expander 내 차트 렌더링
+    with st.expander("📍 지역별 클러스터 × 착한가격업소 비중 분석", expanded=True):
+        display_kmeans_cluster_legend()
+        display_html_map_in_streamlit()
+        st.markdown("""
+                    ###  지역별 클러스터별 착한가격업소 분포 해석
+
+                    - 본 지도는 **서울시 행정동 단위**로 K-Means 클러스터링 결과를 시각화한 것입니다.  
+                    각 클러스터는 상권 특성에 따라 4가지로 구분되며,  
+                    착한가격업소 비중의 높고 낮음은 3D Bar(높이)로 표시됩니다.
+
+                    - 지도에서 확인할 수 있듯이, `빨간색(저소비지역)`과  
+                    `주황색(중장년_밀집지역)`영역에서 **착한가격업소 비중이 상대적으로 높게 나타납니다.**  
+                    이는 저소비/고연령 지역에서 착한가격업소 제도가 상대적으로 더 확산되고 있음을 의미합니다.
+
+                    - 반면, `청년/고소비 지역(초록색: 청년밀집지역 / 파란색: 고소비 지역)`에서는  
+                    착한가격업소의 비중이 낮게 유지되는 경향이 포착됩니다.  
+                    특히, 고소비지역의 착한가격업소 비중의 유의하게 낮은 것을 높이로 확인가능합니다.
+                    이는 **소비력이 높고 물가상승 위험지역**에는 착한가격업소의 확산이 더디다는것을 보여줍니다.
+
+                    ---
+
+                    이러한 결과는 착한가격업소 제도가  
+                    **정작 물가 부담이 큰 지역보다는 수요가 낮고 고연령 지역에 집중되고 있다는 점**에서  
+                    **보다 전략적인 배치 및 선정 기준 개선**이 필요함을 시사합니다.
+
+                    **단순 추천 및 직접참여 기반의 상향식 제도 운영을 넘어**,  
+                    **지역상권 특성에 따른 맞춤형 지원과 하향식(Top-Down) 선정 기준 도입**이 제도 실효성 강화를 위해 필요합니다.
+                    """)
+
+
+# ------------------------------
+# 지도맵을 html로 저장하는 함수
+# ------------------------------
+def save_all_clusters_goodprice_map(gdf, map_json_path='./util/map.json', export_dir='./exports/html_chart/'):
+ # 색상 매핑
 
     color_map = {
         '중장년 밀집지역' : [255, 165, 0],    # 주황
@@ -790,144 +824,21 @@ def display_goodprice_map(gdf, map_json_path='./util/map.json'):
         }
     )
 
-    # Streamlit Expander 내 차트 렌더링
-    with st.expander("📍 지역별 클러스터 × 착한가격업소 비중 분석", expanded=True):
-        display_kmeans_cluster_legend()
-        st.pydeck_chart(deck, use_container_width=True)
-        st.markdown("""
-                    ###  지역별 클러스터별 착한가격업소 분포 해석
-
-                    - 본 지도는 **서울시 행정동 단위**로 K-Means 클러스터링 결과를 시각화한 것입니다.  
-                    각 클러스터는 상권 특성에 따라 4가지로 구분되며,  
-                    착한가격업소 비중의 높고 낮음은 3D Bar(높이)로 표시됩니다.
-
-                    - 지도에서 확인할 수 있듯이, `빨간색(저소비지역)`과  
-                    `주황색(중장년_밀집지역)`영역에서 **착한가격업소 비중이 상대적으로 높게 나타납니다.**  
-                    이는 저소비/고연령 지역에서 착한가격업소 제도가 상대적으로 더 확산되고 있음을 의미합니다.
-
-                    - 반면, `청년/고소비 지역(초록색: 청년밀집지역 / 파란색: 고소비 지역)`에서는  
-                    착한가격업소의 비중이 낮게 유지되는 경향이 포착됩니다.  
-                    특히, 고소비지역의 착한가격업소 비중의 유의하게 낮은 것을 높이로 확인가능합니다.
-                    이는 **소비력이 높고 물가상승 위험지역**에는 착한가격업소의 확산이 더디다는것을 보여줍니다.
-
-                    ---
-
-                    이러한 결과는 착한가격업소 제도가  
-                    **정작 물가 부담이 큰 지역보다는 수요가 낮고 고연령 지역에 집중되고 있다는 점**에서  
-                    **보다 전략적인 배치 및 선정 기준 개선**이 필요함을 시사합니다.
-
-                    **단순 추천 및 직접참여 기반의 상향식 제도 운영을 넘어**,  
-                    **지역상권 특성에 따른 맞춤형 지원과 하향식(Top-Down) 선정 기준 도입**이 제도 실효성 강화를 위해 필요합니다.
-                    """)
-
-
-# ------------------------------
-# 특정 클러스터만 html로 저장하는 함수
-# ------------------------------
-def save_all_clusters_goodprice_map(gdf, label_map_json_path='./util/cluster.json', map_json_path='./util/map.json', export_dir='./exports/html_chart/'):
-
-    # 색상 매핑
-    color_map = {
-        '중장년 밀집지역' : [255, 165, 0],  # 주황
-        '청년 밀집지역': [0, 128, 0],       # 초록
-        '최대소비 지역': [0, 0, 255],             # 파랑
-        '저소비 지역': [255, 0, 0],      # 빨강
-    }
-
-    os.makedirs(export_dir, exist_ok=True)
-
-    # cluster_label_map.json 로딩
-    with open(label_map_json_path, encoding='utf-8') as f:
-        cluster_label_map = json.load(f)
-
-    # 각 클러스터에 대해 반복
-    for cluster_idx, cluster_label in cluster_label_map.items():
-        if cluster_label not in color_map:
-            print(f"❌ 클러스터 라벨 누락: {cluster_label}")
-            continue
-
-        print(f"▶ cluster_{cluster_idx}: {cluster_label} 시각화 중...")
-
-        gdf_filtered = gdf[gdf['kmeans_cluster_label'] == cluster_label].copy()
-        rgb = color_map[cluster_label]
-        gdf_filtered[['r', 'g', 'b']] = pd.DataFrame([rgb] * len(gdf_filtered), index=gdf_filtered.index)
-
-        def polygon_to_coords(geom):
-            if geom.geom_type == 'Polygon':
-                return list(geom.exterior.coords)
-            elif geom.geom_type == 'MultiPolygon':
-                return list(geom.geoms[0].exterior.coords)
-            return []
-
-        gdf_filtered['coordinates'] = gdf_filtered['geometry'].apply(polygon_to_coords)
-        gdf_filtered['centroid'] = gdf_filtered['geometry'].centroid
-        gdf_filtered['lon'] = gdf_filtered['centroid'].x
-        gdf_filtered['lat'] = gdf_filtered['centroid'].y
-
-        # 행정동 영문 매핑
-        with open(map_json_path, encoding='utf-8') as f:
-            dong_map = json.load(f)
-        gdf_filtered['행정동_영문'] = gdf_filtered['행정동'].map(dong_map)
-
-        df_for_pydeck = gdf_filtered.drop(columns=['geometry', 'centroid']).copy()
-
-        polygon_layer = pdk.Layer(
-            "PolygonLayer",
-            df_for_pydeck,
-            get_polygon="coordinates",
-            get_fill_color=["r", "g", "b"],
-            get_elevation="착한가격_업소수_비중",
-            elevation_scale=10000,
-            extruded=True,
-            pickable=True,
-            auto_highlight=True,
-            get_line_color=[255, 255, 255],
-            line_width_min_pixels=1,
-        )
-
-        text_layer = pdk.Layer(
-            "TextLayer",
-            df_for_pydeck,
-            get_position=["lon", "lat", 1500],
-            get_text="행정동_영문",
-            get_size=5,
-            get_color=[255, 255, 255],
-            billboard=True,
-            pickable=False,
-        )
-
-        view_state = pdk.ViewState(
-            longitude=126.9780,
-            latitude=37.5665,
-            zoom=10,
-            pitch=45,
-            bearing=0
-        )
-
-        deck = pdk.Deck(
-            layers=[polygon_layer, text_layer],
-            initial_view_state=view_state,
-            tooltip={
-                "html": "<b>행정동:</b> {행정동}<br><b>착한가격업소 비중:</b> {착한가격_업소수_비중}",
-                "style": {"backgroundColor": "#2c3e50", "color": "white"}
-            }
-        )
-
-        filename = f"cluster_{cluster_idx}.html"
-        output_path = os.path.join(export_dir, filename)
-        deck.to_html(output_path)
-        print(f"✅ 저장 완료: {output_path}")
+    filename = f"clustering_map.html"
+    output_path = os.path.join(export_dir, filename)
+    deck.to_html(output_path)
+    print(f"✅ 저장 완료: {output_path}")
 
 
 
 # ------------------------------
 # streamlit 내 html 지도 표시
 # ------------------------------
-def display_html_map_in_streamlit(index: int, height=600, export_dir='./exports/html_chart/'):
+def display_html_map_in_streamlit(export_dir='./exports/html_chart/'):
     """
     주어진 index에 따라 cluster_{index}.html 파일을 Streamlit에서 시각화합니다.
     """
-    html_path = os.path.join(export_dir, f"cluster_{index}.html")
+    html_path = os.path.join(export_dir, f"clustering_map.html")
 
     if not os.path.exists(html_path):
         st.error(f"❌ HTML 파일이 존재하지 않습니다: {html_path}")
@@ -936,7 +847,7 @@ def display_html_map_in_streamlit(index: int, height=600, export_dir='./exports/
     with open(html_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    components.html(html_content, height=height)
+    components.html(html_content, height=600)
 
 
 
