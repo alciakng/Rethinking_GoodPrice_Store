@@ -579,7 +579,7 @@ def display_clusterwise_goodprice_ratio(df, cluster_col='kmeans_cluster_label'):
             color_discrete_map=color_map_kmeans,
             hole=0.4
         )
-        fig.update_traces(textinfo='percent+label')
+        fig.update_traces(textinfo='percent+label', textfont_size=16)
 
         # 출력
         st.plotly_chart(fig, use_container_width=True)
@@ -639,12 +639,12 @@ def display_clusterwise_goodprice_trend(df):
             ),
             xaxis=dict(
                 type='category',
-                title_font=dict(family="Arial", size=16, color="white"),
-                tickfont=dict(family="Arial", size=14, color="white")
+                title_font=dict(family="Arial", size=18, color="white", weight="bold"),
+                tickfont=dict(family="Arial", size=16, color="white", weight="bold")
             ),
             yaxis=dict(
-                title_font=dict(family="Arial", size=16, color="white"),
-                tickfont=dict(family="Arial", size=14, color="white")
+                title_font=dict(family="Arial", size=18, color="white", weight="bold"),
+                tickfont=dict(family="Arial", size=16, color="white", weight="bold")
             )
         )
 

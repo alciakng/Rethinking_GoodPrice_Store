@@ -9,7 +9,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.tools.tools import add_constant
 from sklearn.metrics import silhouette_score, silhouette_samples
 
-from ui.chart_board import display_clusterwise_goodprice_ratio, plot_grouped_bar_ratio, save_all_clusters_goodprice_map
+from ui.chart_board import display_clusterwise_goodprice_ratio, save_all_clusters_goodprice_map
 from util.common_util import apply_log_transform, check_outliers_std, check_variable_skewness, compute_rmsle_from_result, drop_outlier_rows_std, load_clustered_geodataframe, save_full_model_output
 from util.common_util import apply_zscore_scaling
 
@@ -471,11 +471,12 @@ df_cluster.to_csv('./model/final_cluster.csv',encoding='utf-8-sig', index=False)
 
 
 # ===========================================================
-#  etc. 클러스터링 된 지도시각화 군집별로 html export
+#  etc. 지도시각화 군집별로 html export
 # ===========================================================
 # 지역별 클러스터*착한가격업소수 비중 지도시각화
 gdf = load_clustered_geodataframe()
 save_all_clusters_goodprice_map(gdf)
+
 
 # ===========================================================
 # 3. 소상공인실태조사 전략분석
@@ -533,13 +534,6 @@ z_results_df[z_results_df['결론'] == '유의미한 비율 차이 있음']
 # 최종 클러스터링 데이터셋  
 z_results_df.to_csv('./model/z_results.csv',encoding='utf-8-sig', index=False)
 
-# 플롯차트 
-plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'정부지원정책_추진정책1코드명')
-plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'정부지원정책_추진정책2코드명')
-plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'사업전환_운영계획코드명')
-plot_grouped_bar_ratio(df_소상공인실태조사_그룹,'경영_운영활동코드1명')
-
-
 # ===========================================================
 # 기타1. 상권변화지표별 착한가격업소수 비중분포 파악
 # ===========================================================
@@ -589,7 +583,7 @@ df_final_cluster_BC = (
 )
 
 # 1. 상권 - 행정동경계 병합데이터 
-gdf = load_clustered_geodataframe()
+gdf = load_clustered_geodataframe() 
 
 # 2. 좌표계가 위도/경도인 경우 → 면적계산용 투영 좌표계로 변환 (예: UTM-K = EPSG:5179 또는 TM 기준)
 gdf_proj = gdf.to_crs(epsg=5179)
@@ -601,20 +595,20 @@ gdf_proj[['행정동','area_sqm']]
 # 확인 : 여의도동 면적 8.43km^2 검증
 gdf_proj.loc[gdf_proj['행정동']=='여의동','area_sqm']
 
-# 반경 50m 원의 면적 계산 (πr²)
-radius = 100  # meters
+# 반경 200m 원의 면적 계산 (πr²)
+radius = 200  # meters
 circle_area_100m = np.pi * (radius ** 2)
 
 # 각 행정동 면적에서 몇 개의 100 반경 원이 들어가는지 계산
-gdf_proj['num_100m_circles'] = gdf_proj['area_sqm'] / circle_area_100m
+gdf_proj['num_200m_circles'] = gdf_proj['area_sqm'] / circle_area_100m
 
-gdf_proj['구획당_점포수'] = gdf_proj['점포_수'] / gdf_proj['num_100m_circles']
-gdf_proj['구획당_매출액'] = (gdf_proj['당월_매출_금액'] / gdf_proj['num_100m_circles'])*3
+gdf_proj['구획당_점포수'] = gdf_proj['점포_수'] / gdf_proj['num_200m_circles']
+gdf_proj['구획당_매출액'] = (gdf_proj['당월_매출_금액'] / gdf_proj['num_200m_circles'])*3
 
 # 0.1 반경 원 구획(district) 당 점포 수 평균 
 density_summary = (
     gdf_proj
-    .groupby(['기준_년분기_코드', 'kmeans_cluster_label'])[['구획당_점포수','구획당_매출액']]
+    .groupby(['기준_년분기_코드'])[['구획당_점포수','구획당_매출액']]
     .mean()
     .reset_index()
     .rename(columns={'구획당_점포수': '평균_구획당_점포수', '구획당_매출액':'평균_구획당_매출액'})
@@ -622,3 +616,4 @@ density_summary = (
 
 # 최종결과 
 density_summary
+
